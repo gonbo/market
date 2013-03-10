@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% from '_formhelper.html' import render_field, render_submit %}
+
+{% block content %}
+<div class="container">
+<form action="{{ url_for('.setting') }}" class="form-setting form-horizontal" method="POST">
+    {{ form.hidden_tag() }}
+    {{ render_field(form.username, class='input-block-level', value=g.user['username']) }}
+    {{ render_field(form.email, class='input-block-level', value=g.user['email']) }}
+    {{ render_field(form.about, class='input-block-level') }}
+    {{ render_field(form.city, class='input-block-level', value=g.user['city']) }}
+    {{ render_field(form.photo, class='input-block-level', value=g.user['photo']) }}
+    {{ render_field(form.website, class='input-block-level', value=g.user['website']) }}
+    {{ render_submit('save') }}
+</form>
+</div>
+{% endblock %}
+

@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% from '_formhelper.html' import render_field, render_submit %}
+
+{% block content %}
+<div class="container">
+<form action="{{ request.url }}" class="form-signin form-horizontal" method="POST">
+    {{ form.hidden_tag() }}
+    {{ render_field(form.email, class='input-block-level') }}
+    {{ render_field(form.password, class='input-block-level') }}
+    {{ render_submit('Login') }}
+    <hr />
+    <div>
+        <p>Have no account?<a href="{{ url_for('account.signup') }}">Register</a></p>
+    </div>
+</form>
+</div>
+{% endblock %}

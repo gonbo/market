@@ -1,0 +1,16 @@
+{% macro render_field(field) %}
+{% if field.errors %}
+<ul class=errors>
+    {% for error in field.errors %}
+    <li>{{ error }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
+{{ field(placeholder=field.label.text, **kwargs)|safe }}
+{% endmacro %}
+
+{% macro render_submit(name) %}
+<div>
+<button type="submit" class="btn btn-large btn-block btn-primary">{{ name }}</button>
+</div>
+{% endmacro %}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% from "_formhelper.html" import render_field %}
+
+{% block content %}
+<div class="invite-fixed-container">
+    <form id="invite-form" class="well" action="{{ request.url }}" method="POST">
+        {{ form.hidden_tag() }}
+        {{ render_field(form.username) }}
+        <button class="btn btn-primary btn-large">验证</button>
+    </form>
+</div>
+{% endblock %}

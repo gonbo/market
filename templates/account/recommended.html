@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    {% for user in recommended %}
+    <div class="media">
+        <a href="{{ url_for('timeline.closet', uid=user['id']) }}" class="pull-left">
+            <img src="{{ user['photo'] }}" alt="profile image for {{ user['username'] }}" class="media-object" />
+        </a>
+        <div class="media-body">
+            <a href="{{ url_for('timeline.closet', uid=user['id']) }}"><h4 class="media-heading">{{ user['username'] }}</h4></a>
+            <p>{{ user['about'] }}</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
