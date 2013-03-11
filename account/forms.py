@@ -16,7 +16,7 @@ class SignupForm(Form):
     password = PasswordField('password', validators=[Required(), Length(min=8, max=30)])
 
     def validate_email(self, field):
-        if current_app.redis.exists('account:email:%s:uid' % field.data):
+        if current_app.redis.exists('email:%s:uid' % field.data):
             raise ValueError("This email has been registed! choose another one!")
 
     def save(self):
@@ -33,7 +33,7 @@ class SignupForm(Form):
                 'btc': Decimal('0.00000000'),
                 'rmb': Decimal('0.00')
                 }
-        current_app.redis.set('account:email:%s:uid'%self.email.data, uid)
+        current_app.redis.set('email:%s:uid'%self.email.data, uid)
         current_app.redis.hmset('account:%s'%uid, user)
         return user
 
@@ -44,14 +44,14 @@ class SigninForm(Form):
     password = PasswordField('password', validators=[Required(), Length(min=8, max=30)])
 
     def validate_email(self, field):
-        uid = current_app.redis.get('account:email:%s:uid' % field.data)
+        uid = current_app.redis.get('email:%s:uid' % field.data)
         if not uid:
             raise ValueError('email or passord error!')
         if current_app.redis.hget('account:%s' % uid, 'is_active') == 'False':
             raise ValueError('account is not activated yet!')
 
     def validate_password(self, field):
-        uid = current_app.redis.get('account:email:%s:uid' % self.email.data)
+        uid = current_app.redis.get('email:%s:uid' % self.email.data)
         if not uid:
             raise ValueError('email or password error')
 

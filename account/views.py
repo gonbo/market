@@ -50,9 +50,8 @@ def activate_user(uid):
     """
     active_code = request.args.get('code', None)
     found_user = current_app.redis.hgetall('account:%s' % uid)
-    if not active_code or not found_user:
-        return abort(404)
-    elif found_user.get('active_code') != active_code:
+    if not active_code or not found_user \
+        or found_user.get('active_code') != active_code:
         return abort(404)
 
     if found_user.get('is_active') == 'False':
