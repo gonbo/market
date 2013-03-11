@@ -1,4 +1,5 @@
 import time
+import uuid
 from flask import session, current_app, request
 
 def get_current_user():
@@ -7,10 +8,13 @@ def get_current_user():
         return None
 
     user_session = current_app.redis.hgetall('session:%s'%token)
-    if not user_session or token!= user_session['token']:
+    if not user_session:
         return None
 
     user = current_app.redis.hgetall('account:%s'%user_session['uid'])
+    if user.get('token') != user_session.get('token'):
+        return None
+
     return user
 
 
@@ -18,9 +22,12 @@ def login(user):
     if not user:
         return None
 
-    session['token'] = user['token']
-    current_app.redis.hmset('session:%s'%user['token'],
-            {'uid': user['id'], 'token': user['token'], 'created_at': time.time()})
+    new_token = uuid.uuid4()
+    session['token'] = new_token
+    current_app.redis.hmset('session:%s'%new_token,
+            {'uid': user['id'], 'token': new_token, 'created_at': time.time()})
+    # update user token everytime when login
+    current_app.redis.hset('account:%s' % user['id'], 'token', new_token)
     return user
 
 
