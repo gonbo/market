@@ -25,3 +25,17 @@ def send_subscription_confirm_mail(user):
     mail_to_be_send = Message(subject=subject, recipients=[user['email']])
     mail_to_be_send.body = "Congratulaition!"
     current_app.mail.send(mail_to_be_send)
+
+
+def send_reset_password_mail(email):
+    """
+    Send a reset mail to user, allow the user to reset password.
+    """
+    subject = "Reset Password"
+    mail_to_be_send = Message(subject=subject, recipients=[email])
+    reset_code = uuid.uuid4()
+    reset_url = url_for('account.reset_password', _external=True, code=reset_code)
+    mail_to_be_send.body = "Dear %s, click the following url to reset your password:%s" % \
+            (email, reset_url)
+    current_app.redis.set('reset:%s:email' % reset_code, email)
+    current_app.mail.send(mail_to_be_send)

@@ -4,10 +4,10 @@ import uuid
 import time
 from decimal import Decimal
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask import current_app
+from flask import current_app, g
 from flask.ext.wtf import Form
 from flask.ext.wtf import TextField, PasswordField
-from flask.ext.wtf import Required, Email, Length
+from flask.ext.wtf import Required, Email, Length, EqualTo
 
 
 class SignupForm(Form):
@@ -64,3 +64,41 @@ class SigninForm(Form):
         # for login()
         user.update(update_info)
         self.user = user
+
+class PasswordUpdateForm(Form):
+    """docstring for PasswordUpdateForm"""
+    current_password = PasswordField('Current password',
+            validators=[Required()])
+    new_password = PasswordField('New password',
+            validators=[Required(), Length(min=8, max=30)])
+    new_passsword_confirm = PasswordField('Confirm new password',
+            validators=[Required(), EqualTo('new_password')])
+
+    def validate_password(self, field):
+        if not check_password_hash(g.user['password'], field.data):
+            raise ValueError("Current password Error!")
+
+    def save(self):
+        current_app.redis.hset('user:%s'%g.user['id'], 'password',
+                generate_password_hash(self.new_password.data))
+
+class ResetMailForm(Form):
+    """docstring for ResetMailForm"""
+    email = TextField('email', validators=[Required(), Email()])
+
+    def validate_email(self, field):
+        if not current_app.redis.exists('email:%s:uid' % field.data):
+            raise ValueError('No account asociate with the email!!')
+
+
+class PasswordResetForm(Form):
+    """docstring for PasswordUpdateForm"""
+    new_password = PasswordField('New password',
+            validators=[Required(), Length(min=8, max=30)])
+    new_passsword_confirm = PasswordField('Confirm new password',
+            validators=[Required(), EqualTo('new_password')])
+
+    def save(self, email):
+        uid  = current_app.redis.get('email:%s:uid' % email)
+        current_app.redis.hset('account:%s' % uid, 'password',
+                generate_password_hash(self.new_password.data))
