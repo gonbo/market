@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import redis
-from flask import Flask, g, redirect, url_for, render_template
+from flask import Flask, g, render_template
 from flask_mail import Mail
 from account.helpers import get_current_user
 from account.views import bp_account
@@ -34,9 +34,7 @@ def before_request():
 
 @app.route('/')
 def index():
-    if g.user:
-        return render_template('index.html')
-    return redirect(url_for('account.signin'))
+    return render_template('index.html')
 
 if __name__ == '__main__':
     app.run('0.0.0.0', port=7777, debug=True)
