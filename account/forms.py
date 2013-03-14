@@ -31,7 +31,7 @@ class SignupForm(Form):
                 'created_at': time.time(),
                 'is_active': False,
                 'btc': str(Decimal('0.00000000')),
-                'rmb': str(Decimal('0.00'))
+                'cny': str(Decimal('0.00'))
                 }
         current_app.redis.set('email:%s:uid'%self.email.data, uid)
         current_app.redis.hmset('account:%s'%uid, user)

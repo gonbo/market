@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% from '_formhelper.html' import render_field, render_submit %}
+
+{% block content %}
+<div class="container">
+<form action="{{ url_for('trade.buy_bitcoin') }}" class="form-signin form-horizontal" method="POST">
+    {{ form.hidden_tag() }}
+    {{ render_field(form.amount, class='input-block-level') }}
+    {{ render_field(form.price, class='input-block-level') }}
+    {{ render_submit('Buy') }}
+</form>
+</div>
+{% endblock %}

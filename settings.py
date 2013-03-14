@@ -11,3 +11,4 @@ MAIL_USE_SSL=True
 MAIL_USERNAME = 'emyris.fan@gmail.com'
 MAIL_PASSWORD = 'Ilmctbsbe,./122168'
 DEFAULT_MAIL_SENDER='emyris.fan@gmail.com'
+DEFAULT_BROKER = 'redis://localhost:6379/0'
