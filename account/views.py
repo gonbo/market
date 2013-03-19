@@ -2,12 +2,15 @@
 # -*- coding: utf-8 -*-
 
 from flask import Blueprint, render_template, request, g, \
-        redirect, url_for, current_app, abort, session
+        redirect, url_for, current_app, abort, session, flash
+from itsdangerous import BadSignature
 from .forms import SigninForm, SignupForm, PasswordUpdateForm, \
         ResetMailForm, PasswordResetForm
 from .helpers import login, logout
 from .decorators import login_required
-import mailing
+from tasks import send_register_confirm_mail, send_subscription_confirm_mail, \
+            send_reset_password_mail
+from utils import signer
 
 bp_account = Blueprint('account', __name__)
 
@@ -17,7 +20,9 @@ def signup():
     form = SignupForm()
     if form.validate_on_submit():
         new_user = form.save()
-        mailing.send_awaiting_confirm_mail(new_user)
+        # mailing.send_awaiting_confirm_mail(new_user)
+        confirm_url = url_for('account.activate_user', _external=True)
+        send_register_confirm_mail.delay(new_user, confirm_url)
         return redirect(url_for('.signin'))
 
     return render_template('account/signup.html', form=form)
@@ -44,23 +49,24 @@ def signout():
     return redirect(next_url)
 
 
-@bp_account.route('/activate/<uid>')
-def activate_user(uid):
+@bp_account.route('/activate')
+def activate_user():
     """
     Activate user funtion
     """
-    active_code = request.args.get('code', None)
-    found_user = current_app.redis.hgetall('account:%s' % uid)
-    if not active_code or not found_user \
-        or found_user.get('active_code') != active_code:
-        return abort(404)
-
-    if found_user.get('is_active') == 'False':
-        current_app.redis.hset('account:%s' % uid, 'is_active', 'True')
-        mailing.send_subscription_confirm_mail(found_user)
-    else:
-        # flash('accout is active!')
-        pass
+    active_code = request.args.get('sign', None)
+    if active_code:
+        try:
+            uid = signer.unsign(active_code)
+            user = current_app.redis.hgetall('account:%s' % uid)
+            if user and user.get('is_active') == 'False':
+                current_app.redis.hset('account:%s' % uid, 'is_active', 'True')
+                send_subscription_confirm_mail.delay(user)
+            elif user:
+                flash('User already activated!!')
+        except BadSignature, e:
+            current_app.logger.warning(e)
+            abort(404)
 
     return redirect(url_for('.signin'))
 
@@ -79,7 +85,8 @@ def change_password():
 def send_resetmail():
     form = ResetMailForm()
     if form.validate_on_submit():
-        mailing.send_reset_password_mail(form.email.data)
+        reset_url = url_for('account.reset_password', _external=True)
+        send_reset_password_mail.delay(form.email.data,reset_url)
         return redirect(url_for('index'))
     return render_template('account/sendResetMail.html', form=form)
 
@@ -87,16 +94,16 @@ def send_resetmail():
 @bp_account.route('/reset/password', methods=['GET', 'POST'])
 def reset_password():
     if request.method == 'GET':
-        if not request.args.get('code'):
-            return abort(404)
         reset_code = request.args.get('code')
-        email = current_app.redis.get('reset:%s:email' % reset_code)
-        if not email:
-            return abort(404)
-        session['email'] = email;
-        session['reset_code'] = reset_code
+        if reset_code:
+            email = current_app.redis.get('reset:%s:email' % reset_code)
+            if email:
+                session['email'] = email;
+                session['reset_code'] = reset_code
+            else:
+                abort(404)
         return render_template('account/resetPassword.html', form=PasswordResetForm())
-    elif request.method == 'POST':
+    else:
         if not session.get('email'):
             return abort(404)
 
