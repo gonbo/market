@@ -1,16 +1,19 @@
 <div class="navbar navbar-fixed-top">
     <div class="navbar-inner">
-        <a href="{{ url_for('index') }}" class="brand">Bitcoin Market</a>
-        <div class="nav-collapse collapse">
-            <ul class="nav pull-right">
-                <li><a href="{{ url_for('index') }}">Home</a></li>
-                <li><a href="/trade">Trade</a></li>
-                {% if g.user %}
-                <li><a href="{{ url_for('account.signout') }}">Logout</a></li>
-                {% else %}
-                <li><a href="{{ url_for('account.signin') }}">Login</a></li>
-                {% endif %}
-            </ul>
+        <div class="container">
+            <a href="{{ url_for('index') }}" class="brand">Bitcoin Market</a>
+            <div class="nav-collapse collapse">
+                <ul class="nav nav-tabs pull-right">
+                    <li class="active"><a href="/trade">Trade</a></li>
+                    <li><a href="/news">News</a></li>
+                    <li><a href="/faq">FAQ</a></li>
+                    {% if g.user %}
+                    <li><a href="{{ url_for('account.signout') }}">Logout</a></li>
+                    {% else %}
+                    <li><a href="{{ url_for('account.signin') }}">Login</a></li>
+                    {% endif %}
+                </ul>
+            </div>
         </div>
     </div>
 </div>

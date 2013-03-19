@@ -1,0 +1,17 @@
+body {
+    padding-top: 43px;
+}
+
+.auction .span8,
+.auction .span4 {
+    height: 800px;
+    background-color: #999;
+}
+
+.footer {
+    text-align: center;
+    padding: 30px 0;
+    margin-top: 70px;
+    border-top: 1px solid #E5E5E5;
+    background-color: whiteSmoke;
+}
