@@ -1,17 +1,72 @@
 body {
-    padding-top: 43px;
-}
-
-.auction .span8,
-.auction .span4 {
-    height: 800px;
-    background-color: #999;
+    padding-top: 53px;
+    color: #343C49;
 }
 
 .footer {
     text-align: center;
-    padding: 30px 0;
-    margin-top: 70px;
-    border-top: 1px solid #E5E5E5;
     background-color: whiteSmoke;
+}
+
+.control-group.warning .control-label-small {
+  color: #c09853;
+}
+
+.control-group.error .control-label-small {
+  color: #b94a48;
+}
+
+.control-group.success .control-label-small {
+  color: #468847;
+}
+
+.control-group.info .control-label-small {
+  color: #3a87ad;
+}
+
+.form-horizontal .control-label-small {
+  float: left;
+  width: 60px;
+  padding-top: 5px;
+  text-align: right;
+}
+
+.form-horizontal .controls-small {
+  *display: inline-block;
+  *padding-left: 20px;
+  margin-left: 80px;
+  *margin-left: 0;
+}
+
+.form-horizontal .controls-small:first-child {
+  *padding-left: 80px;
+}
+
+.rounded-border-small {
+    border: 1px solid #DDD;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+    padding-top: 10px;
+    padding-left: 5px;
+}
+
+th {
+    background-color: #404853;
+    background-image: -webkit-gradient(linear, 50% 0%, 50% 100%, color-stop(0%, #687587), color-stop(100%, #404853));
+    background-image: -webkit-linear-gradient(#687587,#404853);
+    background-image: -moz-linear-gradient(#687587,#404853);
+    background-image: -o-linear-gradient(#687587,#404853);
+    background-image: linear-gradient(#687587,#404853);
+    color: white;
+    text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.6);
+}
+
+.chat-room {
+    height: 400px;
+    background-color: #eee;
+}
+
+.news {
+    background-color: #eee;
 }

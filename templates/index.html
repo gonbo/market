@@ -6,8 +6,253 @@
         <div class="span8">
             <div id="char_div">
             </div>
-        </div>
-        <div class="span4"></div>
-    </div>
-</div>
+
+            <div class="row actions">
+                <div class="span4 ">
+                    <h5>Buy Bitcoin</h5>
+                    <div class="order-header">
+                        <div class="row">
+                            <div class="span2">
+                                <p>Your Balance</p>
+                                <p>0 USD</p>
+                            </div>
+                            <div class="span2">
+                                <p>Lowest Ask Price</p>
+                                <p>51.2 USD</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form action="{{ url_for('trade.buy_bitcoin') }}" class="form-horizontal rounded-border-small">
+                        <div class="control-group info">
+                            <label for="inputAmount-buy" class="control-label-small">Amount</label>
+                            <div class="controls-small">
+                                <input id="inputAmount-buy" class="input-medium" type="text" placeholder="Amount" />
+                            </div>
+                        </div>
+                        <div class="control-group info">
+                            <label for="inputPrice-buy" class="control-label-small">Price</label>
+                            <div class="controls-small">
+                                <input id="inputPrice-buy" class="input-medium" type="text" placeholder="Price" />
+                            </div>
+                        </div>
+                        <div class="control-group info">
+                            <div class="controls-small">
+                                <button type="submit" class="btn">Buy BTC</button>
+                            </div>
+                        </div>
+                    </form>
+
+                </div>
+
+                <div class="span4">
+                    <h5>Sell Bitcoin</h5>
+                    <div class="order-header">
+                        <div class="row">
+                            <div class="span2">
+                                <p>Your Balance</p>
+                                <p>0 BTC</p>
+                            </div>
+                            <div class="span2">
+                                <p>Lowest Bid Price</p>
+                                <p>51.09 USD</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form action="{{ url_for('trade.sell_bitcoin') }}" class="form-horizontal rounded-border-small">
+                        <div class="control-group info">
+                            <label for="inputAmount-sell" class="control-label-small">Amount</label>
+                            <div class="controls-small">
+                                <input id="inputAmount-sell" class="input-medium" type="text" placeholder="Amount" />
+                            </div>
+                        </div>
+                        <div class="control-group info">
+                            <label for="inputPrice-sell" class="control-label-small">Price</label>
+                            <div class="controls-small">
+                                <input id="inputPrice-sell" class="input-medium" type="text" placeholder="Price" />
+                            </div>
+                        </div>
+                        <div class="control-group info">
+                            <div class="controls-small">
+                                <button type="submit" class="btn">Buy BTC</button>
+                            </div>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+
+            <div id="orders" class="row">
+                <div class="span8">
+                    <h5>Your current active orders</h5>
+                    <table class="table table-hover table-condensed">
+                        <thread>
+                        <tr>
+                            <th>Type</th>
+                            <th>BTC Amount</th>
+                            <th>Price</th>
+                            <th>Total CNY</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                        </thread>
+                        <tbody>
+                        <tr>
+                            <td>Sell</td>
+                            <td>0.234</td>
+                            <td>54.00</td>
+                            <td>123.24</td>
+                            <td>9:00</td>
+                            <td>Sell</td>
+                        </tr>
+                        <tr>
+                            <td>Sell</td>
+                            <td>0.234</td>
+                            <td>54.00</td>
+                            <td>123.24</td>
+                            <td>9:00</td>
+                            <td>Sell</td>
+                        </tr>
+                        <tr>
+                            <td>Sell</td>
+                            <td>0.234</td>
+                            <td>54.00</td>
+                            <td>123.24</td>
+                            <td>9:00</td>
+                            <td>Sell</td>
+                        </tr>
+                        <tr>
+                            <td>Sell</td>
+                            <td>0.234</td>
+                            <td>54.00</td>
+                            <td>123.24</td>
+                            <td>9:00</td>
+                            <td>Sell</td>
+                        </tr>
+                        <tr>
+                            <td>Sell</td>
+                            <td>0.234</td>
+                            <td>54.00</td>
+                            <td>123.24</td>
+                            <td>9:00</td>
+                            <td>Sell</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="span4">
+                    <h5>Sell Orders</h5>
+                    <table class="table table-hover table-condensed">
+                        <thread>
+                        <tr>
+                            <th>Price</th>
+                            <th>BTC</th>
+                            <th>CNY</th>
+                        </tr>
+                        </thread>
+                        <tbody>
+                        <tr>
+                            <td>50.12</td>
+                            <td>52.12</td>
+                            <td>55.12</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="span4">
+                    <h5>Buy Orders</h5>
+                    <table class="table table-hover table-condensed">
+                        <thread>
+                        <tr>
+                            <th>Price</th>
+                            <th>BTC</th>
+                            <th>CNY</th>
+                        </tr>
+                        </thread>
+                        <tbody>
+                        <tr>
+                            <td>50.12</td>
+                            <td>52.12</td>
+                            <td>55.12</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="row">
+                <div id="market-history" class="span8">
+                    <h5>Market Trade History</h5>
+                    <table class="table table-hover table-condensed">
+                        <thread>
+                        <tr>
+                            <th>Type</th>
+                            <th>BTC Amount</th>
+                            <th>Price</th>
+                            <th>Total CNY</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                        </thread>
+                        <tbody>
+                        <tr>
+                            <td>Sell</td>
+                            <td>0.234</td>
+                            <td>54.00</td>
+                            <td>123.24</td>
+                            <td>9:00</td>
+                            <td>Sell</td>
+                        </tr>
+                        <tr>
+                            <td>Sell</td>
+                            <td>0.234</td>
+                            <td>54.00</td>
+                            <td>123.24</td>
+                            <td>9:00</td>
+                            <td>Sell</td>
+                        </tr>
+                        <tr>
+                            <td>Sell</td>
+                            <td>0.234</td>
+                            <td>54.00</td>
+                            <td>123.24</td>
+                            <td>9:00</td>
+                            <td>Sell</td>
+                        </tr>
+                        <tr>
+                            <td>Sell</td>
+                            <td>0.234</td>
+                            <td>54.00</td>
+                            <td>123.24</td>
+                            <td>9:00</td>
+                            <td>Sell</td>
+                        </tr>
+                        <tr>
+                            <td>Sell</td>
+                            <td>0.234</td>
+                            <td>54.00</td>
+                            <td>123.24</td>
+                            <td>9:00</td>
+                            <td>Sell</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div> <!-- span8 -->
+
+        <div class="span4">
+            <div class="chat-room">
+            </div>
+            <div class="news">
+                <h5>Latest News</h5>
+            </div>
+        </div> <!-- span4 sidebar -->
+    </div> <!-- row auction -->
+</div> <!-- container-->
 {% endblock %}
