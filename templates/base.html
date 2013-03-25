@@ -9,8 +9,10 @@
 <link href="{{ url_for('static', filename='img/bitcoin.png') }}" type="image/x-icon" rel="shortcut icon">
 
 <!-- Le styles -->
-<link href="{{ url_for('static', filename='css/bootstrap.css')}}?version=2" rel="stylesheet">
-<link href="{{ url_for('static', filename='css/application.css')}}?version=31" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/bootstrap.css')}}?version=5" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/application.css')}}?version=37" rel="stylesheet">
+{% block extra_header %}
+{% endblock %}
 <style>
 {% block style %}
 {% endblock %}
@@ -26,6 +28,7 @@
 <!-- Placed at the end of the document so the pages load faster -->
 <script src="{{ url_for('static', filename='js/jquery.min.js') }}"></script>
 <script src="{{ url_for('static', filename='js/bootstrap.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/socketio/socket.io.min.js') }}"></script>
 
 {% block script %}
 {% endblock %}

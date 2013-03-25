@@ -1,17 +1,88 @@
 import uuid
+import time
+from decimal import Decimal
 from celery import Celery
 from fmail import Message
 from utils import signer, mail, redis_db, DEFAULT_MAIL_SENDER
 
+COEFFICIENT = Decimal(10**12)
+REVERSE_TIME_PARAM = Decimal('9999999999.999999')
+BID = 0
+SELL = 1
+CANCEL_BID = 2
+CANCEL_SELL = 3
+
+BID_LUA_SCRIPT = """
+    local uid = ARGV[1]
+    local amount = tonumber(ARGV[2])
+    local price = tonumber(ARGV[3])
+    local balance = tonumber(ARGV[4])
+    local total = tonumber(ARGV[5])
+    local created_at = tonumber(ARGV[6])
+    local priority = tonumber(ARGV[7])
+
+    local next_bid_id = redis.call('hincrby', 'system', 'next_bid_id', 1)
+    redis.call('hset', 'account:' .. uid, 'cny', balance-total)
+    redis.call('hmset', 'bidOrder:' .. next_bid_id, 'uid', uid, 'amount', amount, 'price', price, 'created_at', created_at, 'type', BID)
+    redis.call('zadd', 'bidQueue', priority, next_bid_id)
+    redis.call('lpush', 'account:' .. uid .. ":bids", next_bid_id)
+    return true
+"""
+
+SELL_LUA_SCRIPT = """
+    local uid = ARGV[1]
+    local amount = tonumber(ARGV[2])
+    local price = tonumber(ARGV[3])
+    local balance = tonumber(ARGV[4])
+    local created_at = tonumber(ARGV[5])
+    local priority = tonumber(ARGV[6])
+
+    local next_ask_id = redis.call('hincrby', 'system', 'next_ask_id', 1)
+    redis.call('hset', 'account:' .. uid, 'cny', balance-amount)
+    redis.call('hmset', 'askOrder:' .. next_ask_id, 'uid', uid, 'amount', amount, 'price', price, 'created_at', created_at, 'type', SELL)
+    redis.call('zadd', 'askQueue', priority, next_ask_id)
+    redis.call('lpush', 'account:' .. uid .. ":asks", next_ask_id)
+    return true
+"""
+
+CANCEL_BID_LUA_SCRIPT = """
+    local uid = ARGV[1]
+    local order_id = ARGV[2]
+"""
+
+CANCEL_SELL_LUA_SCRIPT = """
+    local uid = ARGV[1]
+    local order_id = ARGV[2]
+"""
+
+# Remove all the scripts from the script cache.
+redis_db.script_flush()
+# register actions
+bid = redis_db.register_script(BID_LUA_SCRIPT)
+sell = redis_db.register_script(SELL_LUA_SCRIPT)
+cancel_bid = redis_db.register_script(CANCEL_BID_LUA_SCRIPT)
+cancel_sell = redis_db.register_script(CANCEL_SELL_LUA_SCRIPT)
+
 celery = Celery('tasks', broker='redis://localhost:6379/0')
 
 @celery.task
-def bid():
-    pass
+def order(action_type, uid, amount=None, price=None, balance=None,
+        total=None, order_id=None):
+    if action_type == BID:
+        created_at = time.time()
+        priority = Decimal(price)*COEFFICIENT + REVERSE_TIME_PARAM - Decimal(created_at)
+        args = [uid, amount, price, balance, total, created_at, priority]
+        bid(args=args)
+    elif action_type == SELL:
+        created_at = time.time()
+        priority = Decimal(price)*COEFFICIENT + Decimal(created_at)
+        args = [uid, amount, price, balance, created_at, priority]
+        sell(args=args)
+    elif action_type == CANCEL_BID:
+        cancel_bid(uid, order_id)
+    elif action_type == CANCEL_SELL:
+        cancel_sell(uid, order_id)
 
-@celery.task
-def sell():
-    pass
 
 @celery.task
 def send_register_confirm_mail(user, confirm_url):

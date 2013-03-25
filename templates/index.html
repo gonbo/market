@@ -1,4 +1,9 @@
 {% extends 'base.html' %}
+{% from '_formhelper.html' import render_field %}
+
+{% block extra_header %}
+<script src="http://d3js.org/d3.v3.js"></script>
+{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -7,6 +12,8 @@
             <div id="char_div">
             </div>
 
+            {% if g.user %}
+            <hr />
             <div class="row actions">
                 <div class="span4 ">
                     <h5>Buy Bitcoin</h5>
@@ -24,16 +31,17 @@
                     </div>
 
                     <form action="{{ url_for('trade.buy_bitcoin') }}" class="form-horizontal rounded-border-small">
+                        {{ buy_form.hidden_tag() }}
                         <div class="control-group info">
                             <label for="inputAmount-buy" class="control-label-small">Amount</label>
                             <div class="controls-small">
-                                <input id="inputAmount-buy" class="input-medium" type="text" placeholder="Amount" />
+                                {{ render_field(buy_form.amount, class="input-medium", value="Amount") }}
                             </div>
                         </div>
                         <div class="control-group info">
                             <label for="inputPrice-buy" class="control-label-small">Price</label>
                             <div class="controls-small">
-                                <input id="inputPrice-buy" class="input-medium" type="text" placeholder="Price" />
+                                {{ render_field(buy_form.price, class="input-medium", value="Price") }}
                             </div>
                         </div>
                         <div class="control-group info">
@@ -61,21 +69,22 @@
                     </div>
 
                     <form action="{{ url_for('trade.sell_bitcoin') }}" class="form-horizontal rounded-border-small">
+                        {{ sell_form.hidden_tag() }}
                         <div class="control-group info">
                             <label for="inputAmount-sell" class="control-label-small">Amount</label>
                             <div class="controls-small">
-                                <input id="inputAmount-sell" class="input-medium" type="text" placeholder="Amount" />
+                                {{ render_field(sell_form.amount, class="input-medium", value="Amount") }}
                             </div>
                         </div>
                         <div class="control-group info">
                             <label for="inputPrice-sell" class="control-label-small">Price</label>
                             <div class="controls-small">
-                                <input id="inputPrice-sell" class="input-medium" type="text" placeholder="Price" />
+                                {{ render_field(sell_form.price, class="input-medium", value="Price") }}
                             </div>
                         </div>
                         <div class="control-group info">
                             <div class="controls-small">
-                                <button type="submit" class="btn">Buy BTC</button>
+                                <button type="submit" class="btn">Sell BTC</button>
                             </div>
                         </div>
                     </form>
@@ -94,54 +103,23 @@
                             <th>Price</th>
                             <th>Total CNY</th>
                             <th>Date</th>
-                            <th>Action</th>
                         </tr>
                         </thread>
                         <tbody>
+                        {% for order in user_orders %}
                         <tr>
-                            <td>Sell</td>
-                            <td>0.234</td>
-                            <td>54.00</td>
-                            <td>123.24</td>
-                            <td>9:00</td>
-                            <td>Sell</td>
+                            <td>{{ order['type'] }}</td>
+                            <td>{{ order['amount'] }}</td>
+                            <td>{{ order['price'] }}</td>
+                            <td>{{ order['amount']*order['price'] }}</td>
+                            <td>{{ order['created_at']}}</td>
                         </tr>
-                        <tr>
-                            <td>Sell</td>
-                            <td>0.234</td>
-                            <td>54.00</td>
-                            <td>123.24</td>
-                            <td>9:00</td>
-                            <td>Sell</td>
-                        </tr>
-                        <tr>
-                            <td>Sell</td>
-                            <td>0.234</td>
-                            <td>54.00</td>
-                            <td>123.24</td>
-                            <td>9:00</td>
-                            <td>Sell</td>
-                        </tr>
-                        <tr>
-                            <td>Sell</td>
-                            <td>0.234</td>
-                            <td>54.00</td>
-                            <td>123.24</td>
-                            <td>9:00</td>
-                            <td>Sell</td>
-                        </tr>
-                        <tr>
-                            <td>Sell</td>
-                            <td>0.234</td>
-                            <td>54.00</td>
-                            <td>123.24</td>
-                            <td>9:00</td>
-                            <td>Sell</td>
-                        </tr>
+                        {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
+            {% endif %}
             
             <div class="row">
                 <div class="span4">
@@ -155,11 +133,13 @@
                         </tr>
                         </thread>
                         <tbody>
+                        {% for ask in asks %}
                         <tr>
-                            <td>50.12</td>
-                            <td>52.12</td>
-                            <td>55.12</td>
+                            <td>{{ ask['price']}}</td>
+                            <td>{{ ask['amount']}}</td>
+                            <td>{{ ask['price']*ask['amount'] }}</td>
                         </tr>
+                        {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -174,11 +154,13 @@
                         </tr>
                         </thread>
                         <tbody>
+                        {% for bid in bids %}
                         <tr>
-                            <td>50.12</td>
-                            <td>52.12</td>
-                            <td>55.12</td>
+                            <td>{{ bid['price']}}</td>
+                            <td>{{ bid['amount']}}</td>
+                            <td>{{ bid['price']*bid['amount']}}</td>
                         </tr>
+                        {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -195,50 +177,18 @@
                             <th>Price</th>
                             <th>Total CNY</th>
                             <th>Date</th>
-                            <th>Action</th>
                         </tr>
                         </thread>
                         <tbody>
+                        {% for t in transactions %}
                         <tr>
-                            <td>Sell</td>
-                            <td>0.234</td>
-                            <td>54.00</td>
-                            <td>123.24</td>
-                            <td>9:00</td>
-                            <td>Sell</td>
+                            <td>{{ t['type'] }}</td>
+                            <td>{{ t['amount'] }}</td>
+                            <td>{{ t['price'] }}</td>
+                            <td>{{ t['price']*bid['amount'] }}</td>
+                            <td>{{ t['created_at'] }}</td>
                         </tr>
-                        <tr>
-                            <td>Sell</td>
-                            <td>0.234</td>
-                            <td>54.00</td>
-                            <td>123.24</td>
-                            <td>9:00</td>
-                            <td>Sell</td>
-                        </tr>
-                        <tr>
-                            <td>Sell</td>
-                            <td>0.234</td>
-                            <td>54.00</td>
-                            <td>123.24</td>
-                            <td>9:00</td>
-                            <td>Sell</td>
-                        </tr>
-                        <tr>
-                            <td>Sell</td>
-                            <td>0.234</td>
-                            <td>54.00</td>
-                            <td>123.24</td>
-                            <td>9:00</td>
-                            <td>Sell</td>
-                        </tr>
-                        <tr>
-                            <td>Sell</td>
-                            <td>0.234</td>
-                            <td>54.00</td>
-                            <td>123.24</td>
-                            <td>9:00</td>
-                            <td>Sell</td>
-                        </tr>
+                        {% endfor %}
                         </tbody>
                     </table>
                 </div>
@@ -247,7 +197,21 @@
         </div> <!-- span8 -->
 
         <div class="span4">
-            <div class="chat-room">
+            <div class="chat">
+                <p id="nick">michael</p>
+                <div id="connecting">
+                    <div class="wrap">Connecting to socket.io server</div>
+                </div>
+
+                <div id="messages">
+                    <div id="nicknames"><span>Online:</span></div>
+                    <div id="lines"></div>
+                </div>
+
+                <form id="send-message">
+                    <input id="message">
+                    <button>Send</button>
+                </form>
             </div>
             <div class="news">
                 <h5>Latest News</h5>
@@ -255,4 +219,69 @@
         </div> <!-- span4 sidebar -->
     </div> <!-- row auction -->
 </div> <!-- container-->
+{% endblock %}
+
+{% block script %}
+<script src="{{ url_for('static', filename='js/chat.js') }}?version=1"></script>
+<script type="text/javascript">
+var margin = {top: 20, right: 20, bottom: 30, left: 50},
+    width = 620 - margin.left - margin.right,
+    height = 200 - margin.top - margin.bottom;
+
+var parseDate = d3.time.format("%d-%b-%y").parse;
+
+var x = d3.time.scale()
+    .range([0, width]);
+
+var y = d3.scale.linear()
+    .range([height, 0]);
+
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left");
+
+var line = d3.svg.line()
+    .x(function(d) { return x(d.date); })
+    .y(function(d) { return y(d.price); });
+
+var svg = d3.select("#char_div").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+d3.json("{{ url_for('static', filename='trades.json') }}", function(error, data) {
+  data.forEach(function(d) {
+    d.date = d.date;
+    d.price = d.price;
+  });
+
+  x.domain(d3.extent(data, function(d) { return d.date; }));
+  y.domain(d3.extent(data, function(d) { return d.price; }));
+
+  svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
+
+  svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+    .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text("Price ($)");
+
+  svg.append("path")
+      .datum(data)
+      .attr("class", "line")
+      .attr("d", line);
+});
+</script>
 {% endblock %}

@@ -1,16 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import time
 from decimal import Decimal
 from flask import Blueprint, render_template, current_app, g, \
-        redirect, url_for
+        redirect, url_for, jsonify
 from account.decorators import login_required
 from .forms import BuyBitcoinForm, SellBitcoinForm
-from tasks import bid, sell
+from tasks import order, BID, SELL, CANCEL_BID, CANCEL_SELL
 
-COEFFICIENT = Decimal(10**12)
-REVERSE_TIME_PARAM = Decimal('9999999999.999999')
 PAGER = 10
 
 bp_trade = Blueprint('trade', __name__)
@@ -25,26 +22,8 @@ def buy_bitcoin():
         total = amount * price
         balance = Decimal(current_app.redis.hget('account:%s'%g.user['id'], 'cny'))
         if balance > total:
-            created_at = time.time()
-            priority = Decimal(price)*COEFFICIENT + REVERSE_TIME_PARAM - Decimal(created_at)
-
-            new_bid_order = {'uid': g.user['id'],
-                    'amount': amount,
-                    'price': price,
-                    'created_at': created_at}
-
-            system_next_bid_id = current_app.redis.hincrby('system', 'next_bid_id', 1)
-
-            # atomically reduce cny balance and insert a new bid order
-            pipe = current_app.redis.pipeline(transaction=True)
-            pipe.hset('account:%s'%g.user['id'], 'cny', str(balance-total))
-            pipe.hmset('bidOrder:%s'%system_next_bid_id, new_bid_order)
-            pipe.zadd('bidQueue', system_next_bid_id, priority)
-            pipe.lpush('account:%s:bids'%g.user['id'], system_next_bid_id)
-            pipe.execute()
-
-            bid.delay()
-
+            # appending to bid queue
+            order.delay(BID, g.user['id'], amount, price, balance, total)
             return redirect(url_for('trade.orders'))
         else:
             return render_template('trade/buyBitcoin.html',
@@ -54,35 +33,23 @@ def buy_bitcoin():
     return render_template('trade/buyBitcoin.html', form=form)
 
 
+@bp_trade.route('/cancel/bid/order/<int:order_id>', methods=['POST'])
+@login_required
+def cancel_bid_order(order_id):
+    order.delay(CANCEL_BID, g.user['id'], order_id=order_id)
+    return jsonify()
+
+
 @bp_trade.route('/sell/bitcoin', methods=['GET', 'POST'])
 @login_required
 def sell_bitcoin():
     form = SellBitcoinForm()
     if form.validate_on_submit():
-        bitcoin_balance = Decimal(current_app.redis.hget('account:%s'%g.user['id'], 'btc'))
+        balance = Decimal(current_app.redis.hget('account:%s'%g.user['id'], 'btc'))
         amount = Decimal(form.amount.data)
-        price = Decimal(form.price.data)
-        if bitcoin_balance > amount:
-            created_at = time.time()
-            priority = Decimal(price)*COEFFICIENT + Decimal(created_at)
-
-            new_ask_order = {'uid': g.user['id'],
-                    'amount': amount,
-                    'price': price,
-                    'created_at': created_at}
-
-            system_next_ask_id = current_app.redis.hincrby('system', 'next_ask_id', 1)
-
-            # atomically reduce bitcoin balance and insert a new ask order
-            pipe = current_app.redis.pipeline(transaction=True)
-            pipe.hset('account:%s'%g.user['id'], 'btc', str(bitcoin_balance-amount))
-            pipe.hmset('askOrder:%s'%system_next_ask_id, new_ask_order)
-            pipe.zadd('askQueue', system_next_ask_id, priority)
-            pipe.lpush('account:%s:asks'%g.user['id'], system_next_ask_id)
-            pipe.execute()
-
-            sell.delay()
-
+        if balance > amount:
+            price = Decimal(form.price.data)
+            order.delay(SELL, g.user['id'], amount, price, balance)
             return redirect(url_for('trade.orders'))
         else:
             return render_template('trade/sellBitcoin.html',
@@ -90,6 +57,13 @@ def sell_bitcoin():
                     errorMsg="Bitcoin is not enought!")
 
     return render_template('trade/sellBitcoin.html',form=form)
+
+
+@bp_trade.route('/cancel/sell/order/<int:order_id>', methods=['POST'])
+@login_required
+def cancel_sell_order(order_id):
+    order(CANCEL_SELL, g.user['id'], order_id=order_id)
+    return jsonify()
 
 
 @bp_trade.route('/orders')
@@ -118,3 +92,8 @@ def transactions():
 @bp_trade.route('/market/history')
 def market_history():
     return render_template('trade/marketHistory.html')
+
+@bp_trade.route('/market/depth')
+def depth():
+    """docstring for de"""
+    return render_template('trade/depth.html')
