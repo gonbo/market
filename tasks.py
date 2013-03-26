@@ -4,6 +4,8 @@ from decimal import Decimal
 from celery import Celery
 from fmail import Message
 from utils import signer, mail, redis_db, DEFAULT_MAIL_SENDER
+from database import Connection
+import settings
 
 COEFFICIENT = Decimal(10**12)
 REVERSE_TIME_PARAM = Decimal('9999999999.999999')
@@ -64,6 +66,9 @@ cancel_bid = redis_db.register_script(CANCEL_BID_LUA_SCRIPT)
 cancel_sell = redis_db.register_script(CANCEL_SELL_LUA_SCRIPT)
 
 celery = Celery('tasks', broker='redis://localhost:6379/0')
+mysql = Connection(
+        host=settings.MYSQL_HOST, database=settings.MYSQL_DATABASE,
+        user=settings.MYSQL_USER, password=settings.MYSQL_PASSWORD)
 
 @celery.task
 def order(action_type, uid, amount=None, price=None, balance=None,
@@ -112,10 +117,16 @@ def send_reset_password_mail(email, reset_url):
     Send a reset mail to user, allow the user to reset password.
     """
     subject = "Reset Password"
-    mail_to_be_send = Message(subject=subject, recipients=[email])
+    mail_to_be_send = Message(subject=subject, sender=DEFAULT_MAIL_SENDER, recipients=[email])
     reset_code = uuid.uuid4()
-    reset_url =  reset_url + "?code=" + reset_code
+    reset_url =  reset_url + "?code=" + str(reset_code)
     mail_to_be_send.body = "Dear %s, click the following url to reset your password:%s" % \
             (email, reset_url)
-    redis_db.set('reset:%s:email' % reset_code, email)
+
+    mysql.execute("""insert into reset (email, reset_code)
+                    values(%s, %s)
+                    """,
+                    email,
+                    reset_code
+                    )
     mail.send(mail_to_be_send)

@@ -58,9 +58,9 @@ def activate_user():
     if active_code:
         try:
             uid = signer.unsign(active_code)
-            user = current_app.redis.hgetall('account:%s' % uid)
-            if user and user.get('is_active') == 'False':
-                current_app.redis.hset('account:%s' % uid, 'is_active', 'True')
+            user = current_app.db.get('select * from account where id=%s', uid)
+            if user and user.get('is_active') == 0:
+                current_app.db.execute('update account set is_active=1 where id=%s', uid)
                 send_subscription_confirm_mail.delay(user)
             elif user:
                 flash('User already activated!!')
@@ -96,9 +96,9 @@ def reset_password():
     if request.method == 'GET':
         reset_code = request.args.get('code')
         if reset_code:
-            email = current_app.redis.get('reset:%s:email' % reset_code)
-            if email:
-                session['email'] = email;
+            item =  current_app.db.get('select * from reset where reset_code=%s', reset_code)
+            if item:
+                session['email'] = item.get('email')
                 session['reset_code'] = reset_code
             else:
                 abort(404)
@@ -110,7 +110,8 @@ def reset_password():
         form = PasswordResetForm()
         if form.validate_on_submit():
             form.save(session.get('email'))
-            current_app.redis.delete('reset:%s:email' % session.get('reset_code'))
+            current_app.db.execute('delete from reset where reset_code=%s',
+                    session.get('reset_code'))
             session.pop('email', None)
             session.pop('reset_code', None)
             return redirect(url_for('.signin'))
