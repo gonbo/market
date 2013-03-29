@@ -20,10 +20,10 @@ def buy_bitcoin():
         amount = Decimal(form.amount.data)
         price = Decimal(form.price.data)
         total = amount * price
-        balance = Decimal(current_app.redis.hget('account:%s'%g.user['id'], 'cny'))
-        if balance > total:
+        user = current_app.db.get('select * from account where id=%s', g.user['id'])
+        if user.get('cny') > total:
             # appending to bid queue
-            order.delay(BID, g.user['id'], amount, price, balance, total)
+            order.delay(BID, amount, price, user, total)
             return redirect(url_for('trade.orders'))
         else:
             return render_template('trade/buyBitcoin.html',
@@ -36,7 +36,8 @@ def buy_bitcoin():
 @bp_trade.route('/cancel/bid/order/<int:order_id>', methods=['POST'])
 @login_required
 def cancel_bid_order(order_id):
-    order.delay(CANCEL_BID, g.user['id'], order_id=order_id)
+    user = current_app.db.get('select * from account where id=%s', g.user['id'])
+    order.delay(CANCEL_BID, user=user, order_id=order_id)
     return jsonify()
 
 
@@ -45,11 +46,12 @@ def cancel_bid_order(order_id):
 def sell_bitcoin():
     form = SellBitcoinForm()
     if form.validate_on_submit():
-        balance = Decimal(current_app.redis.hget('account:%s'%g.user['id'], 'btc'))
+        user = current_app.db.get('select * from account where id=%s', g.user['id'])
+        balance = user.get('btc')
         amount = Decimal(form.amount.data)
         if balance > amount:
             price = Decimal(form.price.data)
-            order.delay(SELL, g.user['id'], amount, price, balance)
+            order.delay(SELL, amount, price, user)
             return redirect(url_for('trade.orders'))
         else:
             return render_template('trade/sellBitcoin.html',
@@ -62,7 +64,8 @@ def sell_bitcoin():
 @bp_trade.route('/cancel/sell/order/<int:order_id>', methods=['POST'])
 @login_required
 def cancel_sell_order(order_id):
-    order(CANCEL_SELL, g.user['id'], order_id=order_id)
+    user = current_app.db.get('select * from account where id=%s', g.user['id'])
+    order(CANCEL_SELL, user=user, order_id=order_id)
     return jsonify()
 
 

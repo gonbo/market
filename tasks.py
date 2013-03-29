@@ -1,92 +1,262 @@
 import uuid
-import time
-from decimal import Decimal
 from celery import Celery
+from celery.utils.log import get_task_logger
 from fmail import Message
-from utils import signer, mail, redis_db, DEFAULT_MAIL_SENDER
+from utils import signer, mail, DEFAULT_MAIL_SENDER
 from database import Connection
 import settings
 
-COEFFICIENT = Decimal(10**12)
-REVERSE_TIME_PARAM = Decimal('9999999999.999999')
+logger = get_task_logger(__name__)
+
 BID = 0
 SELL = 1
 CANCEL_BID = 2
 CANCEL_SELL = 3
 
-BID_LUA_SCRIPT = """
-    local uid = ARGV[1]
-    local amount = tonumber(ARGV[2])
-    local price = tonumber(ARGV[3])
-    local balance = tonumber(ARGV[4])
-    local total = tonumber(ARGV[5])
-    local created_at = tonumber(ARGV[6])
-    local priority = tonumber(ARGV[7])
-
-    local next_bid_id = redis.call('hincrby', 'system', 'next_bid_id', 1)
-    redis.call('hset', 'account:' .. uid, 'cny', balance-total)
-    redis.call('hmset', 'bidOrder:' .. next_bid_id, 'uid', uid, 'amount', amount, 'price', price, 'created_at', created_at, 'type', BID)
-    redis.call('zadd', 'bidQueue', priority, next_bid_id)
-    redis.call('lpush', 'account:' .. uid .. ":bids", next_bid_id)
-    return true
-"""
-
-SELL_LUA_SCRIPT = """
-    local uid = ARGV[1]
-    local amount = tonumber(ARGV[2])
-    local price = tonumber(ARGV[3])
-    local balance = tonumber(ARGV[4])
-    local created_at = tonumber(ARGV[5])
-    local priority = tonumber(ARGV[6])
-
-    local next_ask_id = redis.call('hincrby', 'system', 'next_ask_id', 1)
-    redis.call('hset', 'account:' .. uid, 'cny', balance-amount)
-    redis.call('hmset', 'askOrder:' .. next_ask_id, 'uid', uid, 'amount', amount, 'price', price, 'created_at', created_at, 'type', SELL)
-    redis.call('zadd', 'askQueue', priority, next_ask_id)
-    redis.call('lpush', 'account:' .. uid .. ":asks", next_ask_id)
-    return true
-"""
-
-CANCEL_BID_LUA_SCRIPT = """
-    local uid = ARGV[1]
-    local order_id = ARGV[2]
-"""
-
-CANCEL_SELL_LUA_SCRIPT = """
-    local uid = ARGV[1]
-    local order_id = ARGV[2]
-"""
-
-# Remove all the scripts from the script cache.
-redis_db.script_flush()
-# register actions
-bid = redis_db.register_script(BID_LUA_SCRIPT)
-sell = redis_db.register_script(SELL_LUA_SCRIPT)
-cancel_bid = redis_db.register_script(CANCEL_BID_LUA_SCRIPT)
-cancel_sell = redis_db.register_script(CANCEL_SELL_LUA_SCRIPT)
-
 celery = Celery('tasks', broker='redis://localhost:6379/0')
+
 mysql = Connection(
         host=settings.MYSQL_HOST, database=settings.MYSQL_DATABASE,
-        user=settings.MYSQL_USER, password=settings.MYSQL_PASSWORD)
+        user=settings.MYSQL_USER, password=settings.MYSQL_PASSWORD,
+        autocommit=False)
+
+
+def exchange():
+    """docstring for exchange"""
+    highest_bid_order = mysql.get('select * from ordered_user_bid_order_view limit 1')
+    lowest_ask_order = mysql.get('select * from ordered_user_ask_order_view limit 1')
+    while lowest_ask_order and highest_bid_order and \
+        lowest_ask_order['price'] <= highest_bid_order['price'] and \
+        lowest_ask_order['uid'] != highest_bid_order['uid']:
+
+        delta = highest_bid_order['amount'] - lowest_ask_order['amount']
+        if delta > 0:
+            # do a transaction
+            mysql.execute('''insert into transaction (amount, price, bid_order_id, ask_order_id,
+                        bid_user_id, ask_user_id)
+                        values(%s, %s, %s, %s, %s, %s)
+                        ''',
+                        lowest_ask_order['amount'],
+                        lowest_ask_order['price'],
+                        highest_bid_order['id'],
+                        lowest_ask_order['id'],
+                        highest_bid_order['uid'],
+                        lowest_ask_order['uid'])
+
+            # move ask order to history
+            mysql.execute('''insert into user_ask_order_his (id, uid, amount, price, created_at)
+                        values(%s, %s, %s, %s, %s)
+                        ''',
+                        lowest_ask_order['id'],
+                        lowest_ask_order['uid'],
+                        lowest_ask_order['amount'],
+                        lowest_ask_order['price'],
+                        lowest_ask_order['created_at'])
+            mysql.execute('delete from user_ask_order where id=%s', lowest_ask_order['id'])
+
+            # split bid order
+            mysql.execute('''insert into user_bid_order_his (id, uid, amount, price,
+                        strike_price, created_at)
+                        values(%s, %s, %s, %s, %s, %s)
+                        ''',
+                        highest_bid_order['id'],
+                        highest_bid_order['uid'],
+                        lowest_ask_order['amount'],
+                        highest_bid_order['price'],
+                        lowest_ask_order['price'],
+                        highest_bid_order['created_at'])
+            mysql.execute('update user_bid_order set amount=%s where id=%s',
+                        delta,
+                        highest_bid_order['id'])
+
+            # calculate volumn of this transaction, do exchange
+            ask_user = mysql.get('select * from account where id=%s', lowest_ask_order['uid'])
+            bid_user = mysql.get('select * from account where id=%s', highest_bid_order['uid'])
+            mysql.execute('update account set cny=%s, frozen_btc=%s where id=%s',
+                        ask_user['cny'] + lowest_ask_order['amount']*lowest_ask_order['price'],
+                        ask_user['frozen_btc'] - lowest_ask_order['amount'],
+                        lowest_ask_order['uid'])
+            mysql.execute('update account set btc=%s, cny=%s, frozen_cny=%s where id=%s',
+                        bid_user['btc'] + lowest_ask_order['amount'],
+                        bid_user['cny'] + lowest_ask_order['amount']*(highest_bid_order['price']-lowest_ask_order['price']),
+                        bid_user['frozen_cny'] - lowest_ask_order['amount']*highest_bid_order['price'],
+                        highest_bid_order['uid'])
+        elif delta < 0:
+            # do a transaction,
+            mysql.execute('''insert into transaction (amount, price, bid_order_id, ask_order_id,
+                        bid_user_id, ask_user_id)
+                        values(%s, %s, %s, %s, %s, %s)
+                        ''',
+                        highest_bid_order['amount'],
+                        lowest_ask_order['price'],
+                        highest_bid_order['id'],
+                        lowest_ask_order['id'],
+                        highest_bid_order['uid'],
+                        lowest_ask_order['uid'])
+
+            # move bid order to history
+            mysql.execute('''insert into user_bid_order_his (id, uid, amount, price,
+                        strike_price, created_at)
+                        values(%s, %s, %s, %s, %s, %s)
+                        ''',
+                        highest_bid_order['id'],
+                        highest_bid_order['uid'],
+                        highest_bid_order['amount'],
+                        highest_bid_order['price'],
+                        lowest_ask_order['price'],
+                        highest_bid_order['created_at'])
+            mysql.execute('delete from user_bid_order where id=%s', highest_bid_order['id'])
+
+            # split ask order
+            mysql.execute('''insert into user_ask_order_his (id, uid, amount, price, created_at)
+                        values(%s, %s, %s, %s, %s)
+                        ''',
+                        lowest_ask_order['id'],
+                        lowest_ask_order['uid'],
+                        highest_bid_order['amount'],
+                        lowest_ask_order['price'],
+                        lowest_ask_order['created_at'])
+            mysql.execute('update user_ask_order set amount=%s where id=%s',
+                        -delta,
+                        lowest_ask_order['id'])
+
+            # calculate volumn of this transaction, do exchange
+            ask_user = mysql.get('select * from account where id=%s', lowest_ask_order['uid'])
+            bid_user = mysql.get('select * from account where id=%s', highest_bid_order['uid'])
+            mysql.execute('update account set cny=%s, frozen_btc=%s where id=%s',
+                        ask_user['cny'] + highest_bid_order['amount']*lowest_ask_order['price'],
+                        ask_user['frozen_btc'] - highest_bid_order['amount'],
+                        lowest_ask_order['uid'])
+            mysql.execute('update account set btc=%s, cny=%s, frozen_cny=%s where id=%s',
+                        bid_user['btc'] + highest_bid_order['amount'],
+                        bid_user['cny'] + highest_bid_order['amount']*(highest_bid_order['price']-lowest_ask_order['price']),
+                        bid_user['frozen_cny'] - highest_bid_order['amount']*highest_bid_order['price'],
+                        highest_bid_order['uid'])
+        else:
+            mysql.execute('''insert into transaction (amount, price, bid_order_id, ask_order_id,
+                        bid_user_id, ask_user_id)
+                        values(%s, %s, %s, %s, %s, %s)
+                        ''',
+                        lowest_ask_order['amount'],
+                        lowest_ask_order['price'],
+                        highest_bid_order['id'],
+                        lowest_ask_order['id'],
+                        highest_bid_order['uid'],
+                        lowest_ask_order['uid'])
+            # move both orders to history tables
+            mysql.execute('''insert into user_bid_order_his (id, uid, amount, price,
+                        strike_price, created_at)
+                        values(%s, %s, %s, %s, %s, %s)
+                        ''',
+                        highest_bid_order['id'],
+                        highest_bid_order['uid'],
+                        highest_bid_order['amount'],
+                        highest_bid_order['price'],
+                        lowest_ask_order['price'],
+                        highest_bid_order['created_at'])
+            mysql.execute('delete from user_bid_order where id=%s', highest_bid_order['id'])
+            mysql.execute('''insert into user_ask_order_his (id, uid, amount, price, created_at)
+                        values(%s, %s, %s, %s, %s)
+                        ''',
+                        lowest_ask_order['id'],
+                        lowest_ask_order['uid'],
+                        lowest_ask_order['amount'],
+                        lowest_ask_order['price'],
+                        lowest_ask_order['created_at'])
+            mysql.execute('delete from user_ask_order where id=%s', lowest_ask_order['id'])
+
+            # calculate volumn of this transaction
+            ask_user = mysql.get('select * from account where id=%s', lowest_ask_order['uid'])
+            bid_user = mysql.get('select * from account where id=%s', highest_bid_order['uid'])
+            mysql.execute('update account set cny=%s, frozen_btc=%s where id=%s',
+                        ask_user['cny'] + lowest_ask_order['amount']*lowest_ask_order['price'],
+                        ask_user['frozen_btc'] - lowest_ask_order['amount'],
+                        lowest_ask_order['uid'])
+            mysql.execute('update account set btc=%s, cny=%s, frozen_cny=%s where id=%s',
+                        bid_user['btc'] + lowest_ask_order['amount'],
+                        bid_user['cny'] + lowest_ask_order['amount']*(highest_bid_order['price']-lowest_ask_order['price']),
+                        bid_user['frozen_cny'] - lowest_ask_order['amount']*highest_bid_order['price'],
+                        highest_bid_order['uid'])
+
+        highest_bid_order = mysql.get('select * from ordered_user_bid_order_view limit 1')
+        lowest_ask_order = mysql.get('select * from ordered_user_ask_order_view limit 1')
+
 
 @celery.task
-def order(action_type, uid, amount=None, price=None, balance=None,
-        total=None, order_id=None):
+def order(action_type, amount=None, price=None, user=None,total=None, order_id=None):
     if action_type == BID:
-        created_at = time.time()
-        priority = Decimal(price)*COEFFICIENT + REVERSE_TIME_PARAM - Decimal(created_at)
-        args = [uid, amount, price, balance, total, created_at, priority]
-        bid(args=args)
+        try:
+            uid = user['id']
+
+            mysql.execute('update account set cny=%s, frozen_cny=%s where id=%s',
+                    user['cny'] - total,
+                    user.get('frozen_cny') + total,
+                    uid)
+
+            mysql.execute('insert into user_bid_order (uid, amount, price) values(%s, %s, %s)', uid, amount, price)
+
+            # do exchange
+            exchange()
+
+            mysql.commit()
+        except Exception, e:
+            logger.error(e)
+            mysql.rollback()
     elif action_type == SELL:
-        created_at = time.time()
-        priority = Decimal(price)*COEFFICIENT + Decimal(created_at)
-        args = [uid, amount, price, balance, created_at, priority]
-        sell(args=args)
+        try:
+            uid = user['id']
+
+            mysql.execute('update account set btc=%s, frozen_btc=%s where id=%s',
+                    user['btc'] - amount,
+                    user['frozen_btc'] + amount,
+                    uid)
+
+            mysql.execute('insert into user_ask_order (uid, amount, price) values(%s, %s, %s)', uid, amount, price)
+
+            exchange()
+
+            mysql.commit()
+        except Exception, e:
+            logger.error(e)
+            mysql.rollback()
     elif action_type == CANCEL_BID:
-        cancel_bid(uid, order_id)
+        try:
+            uid = user['id']
+            order = mysql.get('select * from user_bid_order where order_id=%s and uid=%s', order_id, uid)
+            if order:
+                cny = user['cny'] + order['amount']*order['price']
+                frozen_cny = user['frozen_cny'] - order['amount']*order['price']
+
+                mysql.execute('update account set cny=%s, frozen_cny=%s where order_id=%s and uid=%s',
+                        cny,
+                        frozen_cny,
+                        order_id,
+                        uid)
+
+                mysql.execute('delete from user_bid_order where order_id=%s and uid=%s', order_id, uid)
+                mysql.commit()
+        except Exception, e:
+            logger.error(e)
+            mysql.rollback()
     elif action_type == CANCEL_SELL:
-        cancel_sell(uid, order_id)
+        try:
+            uid = user['id']
+            order = mysql.get('select * from user_ask_order where order_id=%s and uid=%s', order_id, uid)
+            if order:
+                btc = user['btc'] + order['amount']
+                frozen_btc = user['frozen_btc'] - order['amount']
+
+                mysql.execute('update account set btc=%s frozen_btc=%s where order_id=%s and uid=%s',
+                        btc,
+                        frozen_btc,
+                        order_id,
+                        uid)
+
+                mysql.execute('delete from user_ask_order where order_id=%s and uid=%s', order_id, uid)
+                mysql.commit()
+        except Exception, e:
+            logger.error(e)
+            mysql.rollback()
 
 
 @celery.task
@@ -129,4 +299,5 @@ def send_reset_password_mail(email, reset_url):
                     email,
                     reset_code
                     )
+    mysql.commit()
     mail.send(mail_to_be_send)

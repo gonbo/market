@@ -51,10 +51,11 @@ class Connection(object):
     UTF-8 on all connections to avoid time zone and encoding errors.
     """
     def __init__(self, host, database, user=None, password=None,
-                 max_idle_time=7 * 3600):
+                 max_idle_time=7 * 3600, autocommit=True):
         self.host = host
         self.database = database
         self.max_idle_time = max_idle_time
+        self.autocommit = autocommit
 
         args = dict(conv=CONVERSIONS, use_unicode=True, charset="utf8",
                     db=database, init_command='SET time_zone = "+0:00"',
@@ -99,7 +100,7 @@ class Connection(object):
         """Closes the existing database connection and re-opens it."""
         self.close()
         self._db = MySQLdb.connect(**self._db_args)
-        self._db.autocommit(True)
+        self._db.autocommit(self.autocommit)
 
     def iter(self, query, *parameters):
         """Returns an iterator for the given query and parameters."""
@@ -112,6 +113,25 @@ class Connection(object):
                 yield Row(zip(column_names, row))
         finally:
             cursor.close()
+
+    def commit(self):
+        if self._db is not None:
+            try:
+                self._db.ping()
+            except:
+                self.reconnect()
+            try:
+                self._db.commit()
+            except Exception,e:
+                self._db.rollback()
+                logging.exception("Can not commit",e)
+
+    def rollback(self):
+        if self._db is not None:
+            try:
+                self._db.rollback()
+            except Exception,e:
+                logging.error("Can not rollback")
 
     def query(self, query, *parameters):
         """Returns a row list for the given query and parameters."""
@@ -206,7 +226,8 @@ class Connection(object):
     def _execute(self, cursor, query, parameters):
         try:
             return cursor.execute(query, parameters)
-        except OperationalError:
+        except OperationalError, e:
+            logging.error(e)
             logging.error("Error connecting to MySQL on %s", self.host)
             self.close()
             raise
