@@ -36,7 +36,7 @@ CREATE TABLE reset (
 
 DROP TABLE IF EXISTS user_bid_order;
 CREATE TABLE user_bid_order (
-    id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    id FLOAT(40, 0) NOT NULL PRIMARY KEY,
     uid INT NOT NULL,
     amount DECIMAL(16, 8) NOT NULL,
     price DECIMAL(16, 2) NOT NULL,
@@ -58,7 +58,7 @@ CREATE TABLE user_bid_order_his (
 
 DROP TABLE IF EXISTS user_ask_order;
 CREATE TABLE user_ask_order (
-    id int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    id FLOAT(40, 0) NOT NULL PRIMARY KEY,
     uid INT NOT NULL,
     amount DECIMAL(16, 8) NOT NULL,
     price DECIMAL(16, 2) NOT NULL,

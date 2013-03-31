@@ -193,7 +193,8 @@ def order(action_type, amount=None, price=None, user=None,total=None, order_id=N
                     user.get('frozen_cny') + total,
                     uid)
 
-            mysql.execute('insert into user_bid_order (uid, amount, price) values(%s, %s, %s)', uid, amount, price)
+            mysql.execute('insert into user_bid_order (id, uid, amount, price) values(%s, %s, %s, %s)',
+                    uuid.uuid4().int, uid, amount, price)
 
             # do exchange
             exchange()
@@ -211,7 +212,8 @@ def order(action_type, amount=None, price=None, user=None,total=None, order_id=N
                     user['frozen_btc'] + amount,
                     uid)
 
-            mysql.execute('insert into user_ask_order (uid, amount, price) values(%s, %s, %s)', uid, amount, price)
+            mysql.execute('insert into user_ask_order (id, uid, amount, price) values(%s, %s, %s, %s)',
+                    uuid.uuid4().int, uid, amount, price)
 
             exchange()
 
