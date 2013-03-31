@@ -10,7 +10,7 @@ from .helpers import login, logout
 from .decorators import login_required
 from tasks import send_register_confirm_mail, send_subscription_confirm_mail, \
             send_reset_password_mail
-from utils import signer
+from utils import signer, get_redirect_target
 
 bp_account = Blueprint('account', __name__)
 
@@ -23,30 +23,30 @@ def signup():
         # mailing.send_awaiting_confirm_mail(new_user)
         confirm_url = url_for('account.activate_user', _external=True)
         send_register_confirm_mail.delay(new_user, confirm_url)
-        return redirect(url_for('.signin'))
+        return form.redirect('.signin')
 
     return render_template('account/signup.html', form=form)
 
 
 @bp_account.route('/signin', methods=['GET', 'POST'])
 def signin():
-    next_url = request.args.get('next', url_for('index'))
+    next_url = get_redirect_target()
     if g.user:
-        return redirect(next_url)
+        return redirect(next_url or url_for('index'))
 
     form = SigninForm()
     if form.validate_on_submit():
         login(form.user)
-        return redirect(next_url)
+        return form.redirect()
 
     return render_template('account/signin.html', form=form)
 
 
 @bp_account.route('/signout')
 def signout():
-    next_url = request.args.get('next', url_for('index'))
+    next_url = get_redirect_target()
     logout()
-    return redirect(next_url)
+    return redirect(next_url or url_for('index'))
 
 
 @bp_account.route('/activate')
@@ -77,7 +77,7 @@ def change_password():
     form = PasswordUpdateForm()
     if form.validate_on_submit():
         form.save()
-        return redirect(url_for('index'))
+        return form.redirect('index')
     return render_template('account/changePassword.html', form=form)
 
 
@@ -87,7 +87,7 @@ def send_resetmail():
     if form.validate_on_submit():
         reset_url = url_for('account.reset_password', _external=True)
         send_reset_password_mail.delay(form.email.data,reset_url)
-        return redirect(url_for('index'))
+        return form.redirect('index')
     return render_template('account/sendResetMail.html', form=form)
 
 

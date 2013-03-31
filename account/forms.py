@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import uuid
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import current_app, g
-from flask.ext.wtf import Form
 from flask.ext.wtf import TextField, PasswordField
 from flask.ext.wtf import Required, Email, Length, EqualTo
+from utils import RedirectForm
 
 
-class SignupForm(Form):
+class SignupForm(RedirectForm):
     username = TextField('username', validators=[Required(), Length(min=5, max=30)])
     email = TextField('email', validators=[Required(), Email()])
     password = PasswordField('password', validators=[Required(), Length(min=8, max=30)])
@@ -31,7 +30,7 @@ class SignupForm(Form):
         return user
 
 
-class SigninForm(Form):
+class SigninForm(RedirectForm):
     """docstring for SigninForm"""
     email = TextField('email', validators=[Required(), Email()])
     password = PasswordField('password', validators=[Required(), Length(min=8, max=30)])
@@ -52,7 +51,7 @@ class SigninForm(Form):
         self.user = user
 
 
-class PasswordUpdateForm(Form):
+class PasswordUpdateForm(RedirectForm):
     """docstring for PasswordUpdateForm"""
     current_password = PasswordField('Current password',
             validators=[Required()])
@@ -70,7 +69,7 @@ class PasswordUpdateForm(Form):
                 generate_password_hash(self.password.data, g.user['id']))
 
 
-class ResetMailForm(Form):
+class ResetMailForm(RedirectForm):
     """docstring for ResetMailForm"""
     email = TextField('email', validators=[Required(), Email()])
 
@@ -79,7 +78,7 @@ class ResetMailForm(Form):
             raise ValueError('No account asociate with the email!!')
 
 
-class PasswordResetForm(Form):
+class PasswordResetForm(RedirectForm):
     """docstring for PasswordUpdateForm"""
     new_password = PasswordField('New password',
             validators=[Required(), Length(min=8, max=30)])
