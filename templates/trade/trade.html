@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+{% from '_formhelper.html' import render_field, render_submit, render_field_label %}
+
+{% block content %}
+<div class="container">
+    <ul id="myTab" class="nav nav-tabs">
+        <li class="active">
+        <a href="#overview" data-toggle="tab">Overview</a>
+        </li>
+        <li>
+        <a href="#buy" data-toggle="tab">Buy</a>
+        </li>
+        <li>
+        <a href="#sell" data-toggle="tab">Sell</a>
+        </li>
+        <li>
+        <a href="#setting" data-toggle="tab">Account Setting</a>
+        </li>
+    </ul>
+    <div id="tabContent" class="tab-content">
+        <div id="overview" class="tab-pane fade active in">
+            <!-- accout overview table -->
+            <table class="table table-hover">
+                <caption><h5>Account Overview</h5></caption>
+                <tbody>
+                <tr>
+                    <td>Total CNY</td>
+                    <td>{{ account['cny'] }}</td>
+                    <td>
+                        <div class="btn-group pull-right">
+                            <a href="#" class="btn dropdown-toggle" data-toggle="dropdown">
+                                Action
+                                <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a href="#">Withdraw</a></li>
+                                <li><a href="#">Buy Bitcoin</a></li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Total BTC</td>
+                    <td>{{ account['btc'] }}</td>
+                    <td>
+                        <div class="btn-group pull-right">
+                            <a href="#" class="btn dropdown-toggle" data-toggle="dropdown">
+                                Action
+                                <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a href="#">Withdraw</a></li>
+                                <li><a href="#">Sell Bitcoin</a></li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Total Frozen CNY</td>
+                    <td>{{ account['frozen_cny'] }}</td>
+                    <td>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Total Frozen BTC</td>
+                    <td>{{ account['frozen_btc'] }}</td>
+                    <td>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+            
+            <!-- bid orders -->
+            <table class="table table-hover">
+                <caption><h5>Bid Orders</h5></caption>
+                <tbody>
+                <thread>
+                <tr>
+                    <th>BTC Amount</th>
+                    <th>Price</th>
+                    <th>Total CNY</th>
+                    <th>Date</th>
+                </tr>
+                </thread>
+                {% for order in bids %}
+                <tr>
+                    <td>{{ order['amount'] }}</td>
+                    <td>{{ order['price'] }}</td>
+                    <td>{{ order['amount']*order['price'] }}</td>
+                    <td>{{ order['created_at']}}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- ask orders -->
+            <table class="table table-hover">
+                <caption><h5>Ask Orders</h5></caption>
+                <tbody>
+                <thread>
+                <tr>
+                    <th>BTC Amount</th>
+                    <th>Price</th>
+                    <th>Total CNY</th>
+                    <th>Date</th>
+                </tr>
+                </thread>
+                {% for order in asks %}
+                <tr>
+                    <td>{{ order['amount'] }}</td>
+                    <td>{{ order['price'] }}</td>
+                    <td>{{ order['amount']*order['price'] }}</td>
+                    <td>{{ order['created_at']}}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div id="buy" class="tab-pane fade">
+            <form id="buyForm" action="{{ url_for('trade.buy') }}" class="bid-form" method="POST">
+                {{ bidForm.hidden_tag() }}
+                <div class="control-group">
+                    {{ render_field(bidForm.amount) }}
+                    {{ render_field_label(bidForm.amount, "")}}
+                </div>
+                <div class="control-group">
+                    {{ render_field(bidForm.price) }}
+                    {{ render_field_label(bidForm.price, "")}}
+                </div>
+                <div class="control-group">
+                    {{ render_submit('Bid') }}
+                </div>
+            </form>
+        </div>
+        <div id="sell" class="tab-pane fade">
+            <form id="sellForm" action="{{ url_for('trade.sell') }}" class="bid-form" method="POST">
+                {{ askForm.hidden_tag() }}
+                <div class="control-group">
+                    {{ render_field(askForm.amount) }}
+                    {{ render_field_label(askForm.amount, "")}}
+                </div>
+                <div class="control-group">
+                    {{ render_field(askForm.price) }}
+                    {{ render_field_label(askForm.price, "")}}
+                </div>
+                <div class="control-group">
+                    {{ render_submit('Ask') }}
+                </div>
+            </form>
+        </div>
+        <div id="setting" class="tab-pane fade">
+            <p>Account Setting</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="text/javascript">
+$('#buyForm').submit(function(e){
+    dataString = $(this).serialize();
+    target_url = $(this).attr('action');
+    $.ajax({
+        type: "POST",
+        url: target_url,
+        data: dataString,
+        success: function(data){
+            if (data) {
+                success = data.success;
+                if (success == 0){
+                    console.log(data.result.error);
+                }
+                else {
+                    console.log(data.result.amount);
+                }
+            }
+        }
+    });
+    return false;
+});
+$('#sellForm').submit(function(e){
+    dataString = $(this).serialize();
+    target_url = $(this).attr('action');
+    $.ajax({
+        type: "POST",
+        url: target_url,
+        data: dataString,
+        success: function(data){
+            if (data) {
+                success = data.success;
+                if (success == 0){
+                    console.log(data.result.error);
+                }
+                else {
+                    console.log(data.result.amount);
+                }
+            }
+        }
+    });
+    return false;
+});
+</script>
+{% endblock %}

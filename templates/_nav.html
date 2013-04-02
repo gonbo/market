@@ -1,12 +1,10 @@
-<div class="navbar navbar-fixed-top">
+<div class="navbar navbar-inverse">
     <div class="navbar-inner">
         <div class="container">
-            <a href="{{ url_for('index') }}" class="brand">Bitcoin Market</a>
-            <div class="nav-collapse collapse">
-                <ul class="nav nav-tabs pull-right">
-                    <li class="active"><a href="/trade">Trade</a></li>
-                    <li><a href="/news">News</a></li>
-                    <li><a href="/faq">FAQ</a></li>
+            <div class="navbar-collapse top-menu">
+                <ul id="menu-top" class="nav">
+                    <li><a href="{{ url_for('index') }}">Home</a></li>
+                    <li><a href="{{ url_for('trade.trade') }}">Trade</a></li>
                     {% if g.user %}
                     <li><a href="{{ url_for('account.signout') }}">Logout</a></li>
                     {% else %}

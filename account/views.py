@@ -44,9 +44,8 @@ def signin():
 
 @bp_account.route('/signout')
 def signout():
-    next_url = get_redirect_target()
     logout()
-    return redirect(next_url or url_for('index'))
+    return redirect(url_for('index'))
 
 
 @bp_account.route('/activate')

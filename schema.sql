@@ -46,7 +46,7 @@ CREATE TABLE user_bid_order (
 
 DROP TABLE IF EXISTS user_bid_order_his;
 CREATE TABLE user_bid_order_his (
-    id INT NOT NULL,
+    id FLOAT(40, 0) NOT NULL,
     uid INT NOT NULL,
     amount DECIMAL(16, 8) NOT NULL,
     price DECIMAL(16, 2) NOT NULL,
@@ -68,7 +68,7 @@ CREATE TABLE user_ask_order (
 
 DROP TABLE IF EXISTS user_ask_order_his;
 CREATE TABLE user_ask_order_his (
-    id int NOT NULL,
+    id FLOAT(40, 0) NOT NULL,
     uid INT NOT NULL,
     amount DECIMAL(16, 8) NOT NULL,
     price DECIMAL(16, 2) NOT NULL,
@@ -92,8 +92,8 @@ CREATE TABLE transaction (
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     amount DECIMAL(16, 8) NOT NULL,
     price DECIMAL(16, 2) NOT NULL,
-    bid_order_id INT NOT NULL,
-    ask_order_id INT NOT NULL,
+    bid_order_id FLOAT(40, 0) NOT NULL,
+    ask_order_id FLOAT(40, 0) NOT NULL,
     bid_user_id INT NOT NULL,
     ask_user_id INT NOT NULL,
     done_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

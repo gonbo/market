@@ -1,10 +1,6 @@
 {% extends 'base.html' %}
 {% from '_formhelper.html' import render_field %}
 
-{% block extra_header %}
-<script src="http://d3js.org/d3.v3.js"></script>
-{% endblock %}
-
 {% block content %}
 <div class="container">
     <div class="row auction">
@@ -29,28 +25,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <form action="{{ url_for('trade.buy_bitcoin') }}" class="form-horizontal rounded-border-small">
-                        {{ buy_form.hidden_tag() }}
-                        <div class="control-group info">
-                            <label for="inputAmount-buy" class="control-label-small">Amount</label>
-                            <div class="controls-small">
-                                {{ render_field(buy_form.amount, class="input-medium", value="Amount") }}
-                            </div>
-                        </div>
-                        <div class="control-group info">
-                            <label for="inputPrice-buy" class="control-label-small">Price</label>
-                            <div class="controls-small">
-                                {{ render_field(buy_form.price, class="input-medium", value="Price") }}
-                            </div>
-                        </div>
-                        <div class="control-group info">
-                            <div class="controls-small">
-                                <button type="submit" class="btn">Buy BTC</button>
-                            </div>
-                        </div>
-                    </form>
-
                 </div>
 
                 <div class="span4">
@@ -67,28 +41,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <form action="{{ url_for('trade.sell_bitcoin') }}" class="form-horizontal rounded-border-small">
-                        {{ sell_form.hidden_tag() }}
-                        <div class="control-group info">
-                            <label for="inputAmount-sell" class="control-label-small">Amount</label>
-                            <div class="controls-small">
-                                {{ render_field(sell_form.amount, class="input-medium", value="Amount") }}
-                            </div>
-                        </div>
-                        <div class="control-group info">
-                            <label for="inputPrice-sell" class="control-label-small">Price</label>
-                            <div class="controls-small">
-                                {{ render_field(sell_form.price, class="input-medium", value="Price") }}
-                            </div>
-                        </div>
-                        <div class="control-group info">
-                            <div class="controls-small">
-                                <button type="submit" class="btn">Sell BTC</button>
-                            </div>
-                        </div>
-                    </form>
-
                 </div>
             </div>
 
@@ -195,93 +147,6 @@
             </div>
 
         </div> <!-- span8 -->
-
-        <div class="span4">
-            <div class="chat">
-                <p id="nick">michael</p>
-                <div id="connecting">
-                    <div class="wrap">Connecting to socket.io server</div>
-                </div>
-
-                <div id="messages">
-                    <div id="nicknames"><span>Online:</span></div>
-                    <div id="lines"></div>
-                </div>
-
-                <form id="send-message">
-                    <input id="message">
-                    <button>Send</button>
-                </form>
-            </div>
-            <div class="news">
-                <h5>Latest News</h5>
-            </div>
-        </div> <!-- span4 sidebar -->
     </div> <!-- row auction -->
 </div> <!-- container-->
-{% endblock %}
-
-{% block script %}
-<script src="{{ url_for('static', filename='js/chat.js') }}?version=1"></script>
-<script type="text/javascript">
-var margin = {top: 20, right: 20, bottom: 30, left: 50},
-    width = 620 - margin.left - margin.right,
-    height = 200 - margin.top - margin.bottom;
-
-var parseDate = d3.time.format("%d-%b-%y").parse;
-
-var x = d3.time.scale()
-    .range([0, width]);
-
-var y = d3.scale.linear()
-    .range([height, 0]);
-
-var xAxis = d3.svg.axis()
-    .scale(x)
-    .orient("bottom");
-
-var yAxis = d3.svg.axis()
-    .scale(y)
-    .orient("left");
-
-var line = d3.svg.line()
-    .x(function(d) { return x(d.date); })
-    .y(function(d) { return y(d.price); });
-
-var svg = d3.select("#char_div").append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-  .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-d3.json("{{ url_for('static', filename='trades.json') }}", function(error, data) {
-  data.forEach(function(d) {
-    d.date = d.date;
-    d.price = d.price;
-  });
-
-  x.domain(d3.extent(data, function(d) { return d.date; }));
-  y.domain(d3.extent(data, function(d) { return d.price; }));
-
-  svg.append("g")
-      .attr("class", "x axis")
-      .attr("transform", "translate(0," + height + ")")
-      .call(xAxis);
-
-  svg.append("g")
-      .attr("class", "y axis")
-      .call(yAxis)
-    .append("text")
-      .attr("transform", "rotate(-90)")
-      .attr("y", 6)
-      .attr("dy", ".71em")
-      .style("text-anchor", "end")
-      .text("Price ($)");
-
-  svg.append("path")
-      .datum(data)
-      .attr("class", "line")
-      .attr("d", line);
-});
-</script>
 {% endblock %}

@@ -9,8 +9,10 @@
 {{ field(placeholder=field.label.text, **kwargs)|safe }}
 {% endmacro %}
 
-{% macro render_submit(name) %}
-<div>
-<button type="submit" class="btn btn-large btn-block btn-primary">{{ name }}</button>
-</div>
+{% macro render_submit(name, id='') %}
+<button id={{ id }} type="submit" class="btn btn-large btn-block btn-primary">{{ name }}</button>
+{% endmacro %}
+
+{% macro render_field_label(field, class='') %}
+<label for="{{ field.id }}" class="{{ class }}"></label>
 {% endmacro %}

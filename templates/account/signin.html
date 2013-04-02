@@ -1,18 +1,30 @@
 {% extends 'base.html' %}
-{% from '_formhelper.html' import render_field, render_submit %}
+{% from '_formhelper.html' import render_field, render_submit, render_field_label %}
 
 {% block content %}
 <div class="container">
-<form action="{{ request.url }}" class="form-signin form-horizontal" method="POST">
-    {{ form.hidden_tag() }}
-    {{ render_field(form.email, class='input-block-level') }}
-    {{ render_field(form.password, class='input-block-level') }}
-    {{ render_submit('Login') }}
-    <hr />
-    <div>
-        <p>Have no account?<a href="{{ url_for('account.signup') }}">Register</a></p>
-        <p>Forget your password?<a href="{{ url_for('account.send_resetmail') }}">Reset your password via email</a></p>
+    <div class="row">
+        <div class="span6 offset3">
+            <form action="{{ request.url }}" class="login-form" method="POST">
+                {{ form.hidden_tag() }}
+                <div class="control-group">
+                    {{ render_field(form.email, class="login-field") }}
+                    {{ render_field_label(form.email, "login-field-icon fui-man-16") }}
+                </div>
+                <div class="control-group">
+                    {{ render_field(form.password, class="login-field") }}
+                    {{ render_field_label(form.password, "login-field-icon fui-lock-16") }}
+                </div>
+                <div class="control-group">
+                    {{ render_submit('Login') }}
+                </div>
+                <hr />
+                <div>
+                    <p>Have no account?<a href="{{ url_for('account.signup') }}">Register</a></p>
+                    <p>Forget your password?<a href="{{ url_for('account.send_resetmail') }}">Reset your password via email</a></p>
+                </div>
+            </form>
+        </div>
     </div>
-</form>
 </div>
 {% endblock %}

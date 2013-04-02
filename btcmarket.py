@@ -7,7 +7,7 @@ from account.helpers import get_current_user
 from account.views import bp_account
 from trade.views import bp_trade
 from fund.views import bp_fund
-from trade.forms import BuyBitcoinForm, SellBitcoinForm
+from api.views import bp_api
 import database
 
 app = Flask(__name__)
@@ -25,6 +25,7 @@ app.db = database.Connection(
 app.register_blueprint(bp_account, url_prefix="/account")
 app.register_blueprint(bp_trade, url_prefix="/trade")
 app.register_blueprint(bp_fund, url_prefix="/fund")
+app.register_blueprint(bp_api, url_prefix="/api")
 
 
 @app.before_request
@@ -63,9 +64,7 @@ def index():
                 user_orders=user_orders,
                 bids=bids,
                 asks=asks,
-                transactions=transactions,
-                buy_form=BuyBitcoinForm(),
-                sell_form=SellBitcoinForm())
+                transactions=transactions)
 
     return render_template('index.html',
             bids=bids,

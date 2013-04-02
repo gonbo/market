@@ -1,100 +1,112 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from decimal import Decimal
-from flask import Blueprint, render_template, current_app, g, \
-        redirect, url_for, jsonify
+import uuid
+from flask import Blueprint, render_template, current_app, g, jsonify
 from account.decorators import login_required
-from .forms import BuyBitcoinForm, SellBitcoinForm
-from tasks import order, BID, SELL, CANCEL_BID, CANCEL_SELL
+from .forms import TradeForm
+from tasks import exchange
 
 PAGER = 10
 
 bp_trade = Blueprint('trade', __name__)
 
-@bp_trade.route('/buy/bitcoin', methods=['GET', 'POST'])
+@bp_trade.route('/')
 @login_required
-def buy_bitcoin():
-    form = BuyBitcoinForm()
+def trade():
+    account = current_app.db.get('select * from account where id=%s', g.user['id'])
+    bids = current_app.db.query('select * from user_bid_order where uid=%s order by created_at desc',
+            g.user['id'])
+    asks = current_app.db.query('select * from user_ask_order where uid=%s order by created_at desc',
+            g.user['id'])
+
+    return render_template('trade/trade.html',
+            account=account,
+            bids=bids,
+            asks=asks,
+            bidForm=TradeForm(),
+            askForm=TradeForm())
+
+
+@bp_trade.route('/buy', methods=['POST'])
+@login_required
+def buy():
+    form = TradeForm()
     if form.validate_on_submit():
-        amount = Decimal(form.amount.data)
-        price = Decimal(form.price.data)
+        amount = form.amount.data
+        price = form.price.data
+
+        account = current_app.db.get('select * from account where id=%s', g.user['id'])
+
         total = amount * price
-        user = current_app.db.get('select * from account where id=%s', g.user['id'])
-        if user.get('cny') > total:
-            # appending to bid queue
-            order.delay(BID, amount, price, user, total)
-            return redirect(url_for('trade.orders'))
-        else:
-            return render_template('trade/buyBitcoin.html',
-                    form=form,
-                    errorMsg='Balance is not enough!')
+        if account.get('cny') > total:
+            current_app.db.execute('update account set cny=%s, frozen_cny=%s where id=%s',
+                    account['cny'] -total,
+                    account['frozen_cny'] + total,
+                    g.user['id'])
 
-    return render_template('trade/buyBitcoin.html', form=form)
+            current_app.db.execute('insert into user_bid_order (id, uid, amount, price) values(%s, %s, %s, %s)',
+                    uuid.uuid4().int, g.user['id'], amount, price)
+
+            exchange.delay()
+            return jsonify(success=1, result={'amount': float(amount), 'price': float(price)})
+
+        return jsonify(success=0, error={'msg': 'No enough fund.'})
+
+    return jsonify(success=0, error={'msg': form.errors})
 
 
-@bp_trade.route('/cancel/bid/order/<int:order_id>', methods=['POST'])
+@bp_trade.route('/sell', methods=['POST'])
 @login_required
-def cancel_bid_order(order_id):
-    user = current_app.db.get('select * from account where id=%s', g.user['id'])
-    order.delay(CANCEL_BID, user=user, order_id=order_id)
-    return jsonify()
-
-
-@bp_trade.route('/sell/bitcoin', methods=['GET', 'POST'])
-@login_required
-def sell_bitcoin():
-    form = SellBitcoinForm()
+def sell():
+    form = TradeForm()
     if form.validate_on_submit():
-        user = current_app.db.get('select * from account where id=%s', g.user['id'])
-        balance = user.get('btc')
-        amount = Decimal(form.amount.data)
-        if balance > amount:
-            price = Decimal(form.price.data)
-            order.delay(SELL, amount, price, user)
-            return redirect(url_for('trade.orders'))
-        else:
-            return render_template('trade/sellBitcoin.html',
-                    form=form,
-                    errorMsg="Bitcoin is not enought!")
+        amount = form.amount.data
+        price = form.price.data
 
-    return render_template('trade/sellBitcoin.html',form=form)
+        account = current_app.db.get('select * from account where id=%s', g.user['id'])
 
+        if account.get('btc') > amount:
+            current_app.db.execute('update account set btc=%s, frozen_btc=%s where id=%s',
+                    account['btc'] - amount,
+                    account['frozen_btc'] + amount,
+                    g.user['id'])
 
-@bp_trade.route('/cancel/sell/order/<int:order_id>', methods=['POST'])
-@login_required
-def cancel_sell_order(order_id):
-    user = current_app.db.get('select * from account where id=%s', g.user['id'])
-    order(CANCEL_SELL, user=user, order_id=order_id)
-    return jsonify()
+            current_app.db.execute('insert into user_ask_order (id, uid, amount, price) values(%s, %s, %s, %s)',
+                    uuid.uuid4().int, g.user['id'], amount, price)
+
+            exchange.delay()
+            return jsonify(success=1, result={'amount': float(amount), 'price': float(price)})
+
+        return jsonify(success=0, error={'msg': 'No enough btc.'})
+
+    return jsonify(success=0, error={'msg': form.errors})
 
 
 @bp_trade.route('/orders')
 @login_required
 def orders():
-    bids = []
-    bid_order_ids = current_app.redis.lrange('account:%s:bids'%g.user['id'], 0, PAGER)
-    for order_id in bid_order_ids:
-        bids.append(current_app.redis.hgetall('bidOrder:%s'%order_id))
-
-    asks = []
-    ask_order_ids = current_app.redis.lrange('account:%s:asks'%g.user['id'], 0, PAGER)
-    for ask_id in ask_order_ids:
-        asks.append(current_app.redis.hgetall('askOrder:%s'%ask_id))
-
+    bids= current_app.db.query('select * from user_bid_order where uid=%s order by created_at desc',
+            g.user['id'])
+    asks = current_app.db.query('select * from user_ask_order where uid=%s order by created_at desc',
+            g.user['id'])
     return render_template('trade/orders.html', bids=bids, asks=asks)
 
 
 @bp_trade.route('/trasactions')
 @login_required
 def transactions():
-    transactions = []
+    transactions = current_app.db.query('''select * from transaction
+        where bid_user_id=%s or ask_order_id =%s order by done_at''',
+        g.user['id'], g.user['id'])
+
     return render_template('trade/transactions.html', transactions=transactions)
 
 
 @bp_trade.route('/market/history')
 def market_history():
     return render_template('trade/marketHistory.html')
+
 
 @bp_trade.route('/market/depth')
 def depth():
