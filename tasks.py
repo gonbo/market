@@ -23,10 +23,18 @@ def exchange():
         lowest_ask_order = mysql.get('select * from ask_order_view limit 1')
         highest_bid_order = mysql.get('select * from bid_order_view limit 1')
 
+        # debug
+        if settings.CELERY_DEBUG:
+            logger.info('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+            logger.info(highest_bid_order)
+            logger.info(lowest_ask_order)
+            logger.info('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+
         while lowest_ask_order and highest_bid_order and \
             lowest_ask_order['price'] <= highest_bid_order['price'] and \
             lowest_ask_order['uid'] != highest_bid_order['uid']:
 
+            logger.info('into while')
             delta = highest_bid_order['amount'] - lowest_ask_order['amount']
             if delta > 0:
                 # do a transaction
@@ -180,6 +188,13 @@ def exchange():
 
             lowest_ask_order = mysql.get('select * from ask_order_view limit 1')
             highest_bid_order = mysql.get('select * from bid_order_view limit 1')
+
+            # debug
+            if settings.CELERY_DEBUG:
+                logger.info('------------------------------------------------------------')
+                logger.info(highest_bid_order)
+                logger.info(lowest_ask_order)
+                logger.info('------------------------------------------------------------')
 
         mysql.commit()
     except Exception, e:

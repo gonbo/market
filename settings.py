@@ -18,3 +18,4 @@ MYSQL_HOST = "localhost"
 MYSQL_DATABASE = "btc"
 MYSQL_USER = "btc"
 MYSQL_PASSWORD = "btcpass"
+CELERY_DEBUG = True
