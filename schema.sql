@@ -36,7 +36,7 @@ CREATE TABLE reset (
 
 DROP TABLE IF EXISTS user_bid_order;
 CREATE TABLE user_bid_order (
-    id FLOAT(40, 0) NOT NULL PRIMARY KEY,
+    id DOUBLE NOT NULL PRIMARY KEY,
     uid INT NOT NULL,
     amount DECIMAL(16, 8) NOT NULL,
     price DECIMAL(16, 2) NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE user_bid_order (
 
 DROP TABLE IF EXISTS user_bid_order_his;
 CREATE TABLE user_bid_order_his (
-    id FLOAT(40, 0) NOT NULL,
+    id DOUBLE NOT NULL,
     uid INT NOT NULL,
     amount DECIMAL(16, 8) NOT NULL,
     price DECIMAL(16, 2) NOT NULL,
@@ -58,7 +58,7 @@ CREATE TABLE user_bid_order_his (
 
 DROP TABLE IF EXISTS user_ask_order;
 CREATE TABLE user_ask_order (
-    id FLOAT(40, 0) NOT NULL PRIMARY KEY,
+    id DOUBLE NOT NULL PRIMARY KEY,
     uid INT NOT NULL,
     amount DECIMAL(16, 8) NOT NULL,
     price DECIMAL(16, 2) NOT NULL,
@@ -68,7 +68,7 @@ CREATE TABLE user_ask_order (
 
 DROP TABLE IF EXISTS user_ask_order_his;
 CREATE TABLE user_ask_order_his (
-    id FLOAT(40, 0) NOT NULL,
+    id DOUBLE NOT NULL,
     uid INT NOT NULL,
     amount DECIMAL(16, 8) NOT NULL,
     price DECIMAL(16, 2) NOT NULL,
@@ -77,24 +77,24 @@ CREATE TABLE user_ask_order_his (
     INDEX(uid)
 );
 
-DROP VIEW IF EXISTS ordered_user_bid_order_view;
-CREATE VIEW ordered_user_bid_order_view as
-SELECT * FROM user_bid_order
-ORDER BY price DESC, created_at ASC;
-
-DROP VIEW IF EXISTS ordered_user_ask_order_view;
-CREATE VIEW ordered_user_ask_order_view as
-SELECT * FROM user_ask_order
-ORDER BY price ASC, created_at ASC;
-
 DROP TABLE IF EXISTS transaction;
 CREATE TABLE transaction (
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     amount DECIMAL(16, 8) NOT NULL,
     price DECIMAL(16, 2) NOT NULL,
-    bid_order_id FLOAT(40, 0) NOT NULL,
-    ask_order_id FLOAT(40, 0) NOT NULL,
+    bid_order_id DOUBLE NOT NULL,
+    ask_order_id DOUBLE NOT NULL,
     bid_user_id INT NOT NULL,
     ask_user_id INT NOT NULL,
     done_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+DROP VIEW IF EXISTS bid_order_view;
+CREATE VIEW bid_order_view AS
+SELECT * FROM user_bid_order
+ORDER BY price desc, created_at;
+
+DROP VIEW IF EXISTS ask_order_view;
+CREATE VIEW ask_order_view AS
+SELECT * FROM user_ask_order
+ORDER BY price, created_at;

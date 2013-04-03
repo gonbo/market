@@ -20,16 +20,12 @@ mysql = Connection(
 def exchange():
     """docstring for exchange"""
     try:
-        lowest_ask_order = mysql.get('select * from ordered_user_ask_order_view limit 1')
-        highest_bid_order = mysql.get('select * from ordered_user_bid_order_view limit 1')
-        logger.info(highest_bid_order)
-        logger.info(lowest_ask_order)
+        lowest_ask_order = mysql.get('select * from ask_order_view limit 1')
+        highest_bid_order = mysql.get('select * from bid_order_view limit 1')
 
         while lowest_ask_order and highest_bid_order and \
             lowest_ask_order['price'] <= highest_bid_order['price'] and \
             lowest_ask_order['uid'] != highest_bid_order['uid']:
-
-            logger.info('into while')
 
             delta = highest_bid_order['amount'] - lowest_ask_order['amount']
             if delta > 0:
@@ -96,6 +92,7 @@ def exchange():
                             highest_bid_order['uid'],
                             lowest_ask_order['uid'])
 
+
                 # move bid order to history
                 mysql.execute('''insert into user_bid_order_his (id, uid, amount, price,
                             strike_price, created_at)
@@ -134,10 +131,11 @@ def exchange():
                             bid_user['cny'] + highest_bid_order['amount']*(highest_bid_order['price']-lowest_ask_order['price']),
                             bid_user['frozen_cny'] - highest_bid_order['amount']*highest_bid_order['price'],
                             highest_bid_order['uid'])
+
             else:
                 mysql.execute('''insert into transaction (amount, price, bid_order_id, ask_order_id,
                             bid_user_id, ask_user_id)
-                            values(%s, %s, %s, %s, %s, %s)
+                            values(%s, %s, %s, %sd %s, %s)
                             ''',
                             lowest_ask_order['amount'],
                             lowest_ask_order['price'],
@@ -180,10 +178,8 @@ def exchange():
                             bid_user['frozen_cny'] - lowest_ask_order['amount']*highest_bid_order['price'],
                             highest_bid_order['uid'])
 
-            highest_bid_order = mysql.get('select * from ordered_user_bid_order_view limit 1')
-            lowest_ask_order = mysql.get('select * from ordered_user_ask_order_view limit 1')
-            logger.info(highest_bid_order)
-            logger.info(lowest_ask_order)
+            lowest_ask_order = mysql.get('select * from ask_order_view limit 1')
+            highest_bid_order = mysql.get('select * from bid_order_view limit 1')
 
         mysql.commit()
     except Exception, e:
